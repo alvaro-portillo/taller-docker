@@ -2,7 +2,7 @@
 
 Integrantes: **Alvaro Sneider Portillo Mora**, **Juan David Llanos Castañeda**.
 
-Repositorio público. Colaboradores: ninguno (no se añadieron cuentas de IA ni co-colaboradores).
+Repositorio público.
 
 ## Contenido
 
