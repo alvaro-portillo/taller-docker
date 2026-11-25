@@ -1,0 +1,62 @@
+
+
+===== 1. docker compose ps (servicios levantados) =====
+PS> docker compose ps
+NAME                          IMAGE                                                                     COMMAND                  SERVICE       CREATED          STATUS                   PORTS
+taller_docker-catalogo-1      taller_docker-catalogo                                                    "java -jar app.jar"      catalogo      4 minutes ago    Up 2 minutes             0.0.0.0:8081->8081/tcp, [::]:8081->8081/tcp
+taller_docker-catalogo-db-1   postgres:16                                                               "docker-entrypoint.sÔÇª"   catalogo-db   4 minutes ago    Up 4 minutes (healthy)   5432/tcp
+taller_docker-pedidos-1       sha256:017ef88b640bc91116c2d69ca0deb4d835b0fabf1c099cccb81eda02241e2a6c   "java -jar app.jar"      pedidos       31 minutes ago   Up 27 minutes            0.0.0.0:8082->8082/tcp, [::]:8082->8082/tcp
+
+===== 2. Productos antes del reinicio (PostgreSQL) =====
+PS> curl.exe -s http://localhost:8081/productos
+[{"id":1,"nombre":"Cafe de Santander 500 g","precio":18000.0,"stock":20},{"id":2,"nombre":"Arepas boyacenses x5","precio":9500.0,"stock":15},{"id":3,"nombre":"Bocadillo x12","precio":7000.0,"stock":0}]
+
+===== 3. Crear producto para probar persistencia =====
+PS> curl.exe -s -i -X POST http://localhost:8081/productos -H "Content-Type: application/json" -d @producto.json
+HTTP/1.1 201 
+Content-Type: application/json
+Content-Length: 70
+Date: Wed, 25 Nov 2026 00:44:33 GMT
+
+{"id":4,"nombre":"Producto persistente UFP","precio":1234.0,"stock":5}
+
+===== 4. Reiniciar Catalogo y volver a consultar =====
+PS> docker compose restart catalogo
+ Container taller_docker-catalogo-1 Restarting 
+ Container taller_docker-catalogo-1 Started 
+PS> curl.exe -s http://localhost:8081/productos
+[{"id":1,"nombre":"Cafe de Santander 500 g","precio":18000.0,"stock":20},{"id":2,"nombre":"Arepas boyacenses x5","precio":9500.0,"stock":15},{"id":3,"nombre":"Bocadillo x12","precio":7000.0,"stock":0},{"id":4,"nombre":"Producto persistente UFP","precio":1234.0,"stock":5}]
+
+===== 5. Pedido creado - HTTP 201 (todo levantado) =====
+PS> curl.exe -s -i -X POST http://localhost:8082/pedidos -H "Content-Type: application/json" -d @pedido.json
+HTTP/1.1 201 
+Content-Type: application/json
+Content-Length: 113
+Date: Wed, 25 Nov 2026 00:45:57 GMT
+
+{"cantidad":2,"estado":"CREADO","id":3,"nombreProducto":"Cafe de Santander 500 g","productoId":1,"total":36000.0}
+
+===== 6. Catalogo detenido - HTTP 503 =====
+PS> docker compose stop catalogo
+ Container taller_docker-catalogo-1 Stopping 
+ Container taller_docker-catalogo-1 Stopped 
+PS> curl.exe -s -i -X POST http://localhost:8082/pedidos -H "Content-Type: application/json" -d @pedido.json
+HTTP/1.1 503 
+Content-Type: application/json
+Transfer-Encoding: chunked
+Date: Wed, 25 Nov 2026 00:46:13 GMT
+Connection: close
+
+{"timestamp":"2026-11-25T00:46:13.339Z","status":503,"error":"Service Unavailable","path":"/pedidos"}
+PS> docker compose start catalogo
+ Container taller_docker-catalogo-db-1 Waiting 
+ Container taller_docker-catalogo-db-1 Healthy 
+ Container taller_docker-catalogo-1 Starting 
+ Container taller_docker-catalogo-1 Started 
+
+===== 7. Estado final =====
+PS> docker compose ps
+NAME                          IMAGE                                                                     COMMAND                  SERVICE       CREATED          STATUS                   PORTS
+taller_docker-catalogo-1      taller_docker-catalogo                                                    "java -jar app.jar"      catalogo      7 minutes ago    Up About a minute        0.0.0.0:8081->8081/tcp, [::]:8081->8081/tcp
+taller_docker-catalogo-db-1   postgres:16                                                               "docker-entrypoint.sÔÇª"   catalogo-db   8 minutes ago    Up 8 minutes (healthy)   5432/tcp
+taller_docker-pedidos-1       sha256:017ef88b640bc91116c2d69ca0deb4d835b0fabf1c099cccb81eda02241e2a6c   "java -jar app.jar"      pedidos       34 minutes ago   Up 30 minutes            0.0.0.0:8082->8082/tcp, [::]:8082->8082/tcp
